@@ -1,0 +1,16 @@
+# Compiled packer file
+plugin/packer_compiled.lua
+
+# Swap files
+*.swp
+*.swo
+*.swn
+
+# Undo files (if kept locally)
+undodir/
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
