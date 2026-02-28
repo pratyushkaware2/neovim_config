@@ -31,6 +31,12 @@ vim.opt.updatetime = 50
 vim.opt.conceallevel = 1
 vim.opt.guifont = "JetBrainsMono Nerd Font:h12"
 
+-- Disable unused providers
+vim.g.loaded_node_provider = 0
+vim.g.loaded_perl_provider = 0
+vim.g.loaded_python3_provider = 0
+vim.g.loaded_ruby_provider = 0
+
 -- Netrw configuration for VS Code-like sidebar
 vim.g.netrw_banner = 0
 vim.g.netrw_liststyle = 3

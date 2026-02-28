@@ -6,46 +6,49 @@ vim.g.mapleader = " "
 ---------------------------------------------------------------------------
 -- General
 ---------------------------------------------------------------------------
-vim.keymap.set("n", "<leader>fv", ":Lexplore<CR>", { desc = "Toggle Netrw Sidebar" })
-vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>", { desc = "Toggle NvimTree" })
-vim.keymap.set("n", "<leader>nh", ":nohlsearch<CR>", { desc = "Clear search highlights" })
+vim.keymap.set("n", "<leader>e", "<Cmd>NvimTreeToggle<CR>", { desc = "Toggle file explorer" })
+vim.keymap.set("n", "<Esc>", "<Cmd>nohlsearch<CR>", { desc = "Clear search highlights" })
 vim.keymap.set("i", "jk", "<Esc>", { noremap = true, silent = true, desc = "Exit insert mode" })
-vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], { desc = "Replace word under cursor" })
+vim.keymap.set("n", "<leader>cR", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], { desc = "Replace word under cursor" })
 
 -- Clipboard / register helpers
 vim.keymap.set("x", "<leader>p", [["_dP]], { desc = "Paste without overwriting register" })
 vim.keymap.set({ "n", "v" }, "<leader>y", [["+y]], { desc = "Yank to system clipboard" })
 vim.keymap.set("n", "<leader>Y", [["+Y]], { desc = "Yank line to system clipboard" })
-vim.keymap.set({ "n", "v" }, "<leader>d", "\"_d", { desc = "Delete without copying" })
+vim.keymap.set({ "n", "v" }, "<leader>x", "\"_d", { desc = "Delete without copying" })
 
 ---------------------------------------------------------------------------
--- Tmux navigation
+-- Window / Tmux navigation
 ---------------------------------------------------------------------------
-vim.keymap.set("n", "<C-h>", "<Cmd>TmuxNavigateLeft<CR>")
-vim.keymap.set("n", "<C-j>", "<Cmd>TmuxNavigateDown<CR>")
-vim.keymap.set("n", "<C-k>", "<Cmd>TmuxNavigateUp<CR>")
-vim.keymap.set("n", "<C-l>", "<Cmd>TmuxNavigateRight<CR>")
+vim.keymap.set("n", "<C-h>", "<Cmd>TmuxNavigateLeft<CR>", { desc = "Navigate left" })
+vim.keymap.set("n", "<C-j>", "<Cmd>TmuxNavigateDown<CR>", { desc = "Navigate down" })
+vim.keymap.set("n", "<C-k>", "<Cmd>TmuxNavigateUp<CR>", { desc = "Navigate up" })
+vim.keymap.set("n", "<C-l>", "<Cmd>TmuxNavigateRight<CR>", { desc = "Navigate right" })
 
 -- Open tmux split in current directory
 vim.keymap.set("n", "<leader>t", function()
     local cwd = vim.fn.getcwd()
     vim.fn.system("tmux split-window -v -p 30 -c " .. vim.fn.shellescape(cwd))
-end, { desc = "Open tmux horizontal split (bottom)" })
+end, { desc = "Open tmux terminal split" })
 
 ---------------------------------------------------------------------------
--- Telescope
+-- Telescope (search)
 ---------------------------------------------------------------------------
 local telescope_ok, builtin = pcall(require, "telescope.builtin")
 if telescope_ok then
-    vim.keymap.set("n", "<leader>ff", builtin.find_files, { desc = "Telescope find files" })
-    vim.keymap.set("n", "<leader>fg", builtin.live_grep, { desc = "Telescope live grep" })
-    vim.keymap.set("n", "<leader>fb", builtin.buffers, { desc = "Telescope buffers" })
-    vim.keymap.set("n", "<leader>fh", builtin.help_tags, { desc = "Telescope help tags" })
-    vim.keymap.set("n", "<leader>fd", builtin.diagnostics, { desc = "Telescope diagnostics" })
-    vim.keymap.set("n", "<leader>/", builtin.current_buffer_fuzzy_find, { desc = "Telescope fuzzy find in current buffer" })
-    vim.keymap.set("n", "<leader>fs", function()
+    vim.keymap.set("n", "<leader>ff", builtin.find_files, { desc = "Find files" })
+    vim.keymap.set("n", "<leader>/", builtin.live_grep, { desc = "Live grep" })
+    vim.keymap.set("n", "<leader>,", builtin.buffers, { desc = "Switch buffer" })
+    vim.keymap.set("n", "<leader>fb", builtin.buffers, { desc = "Find buffers" })
+    vim.keymap.set("n", "<leader>sh", builtin.help_tags, { desc = "Search help" })
+    vim.keymap.set("n", "<leader>sd", builtin.diagnostics, { desc = "Search diagnostics" })
+    vim.keymap.set("n", "<leader>sk", builtin.keymaps, { desc = "Search keymaps" })
+    vim.keymap.set("n", "<leader>sb", builtin.current_buffer_fuzzy_find, { desc = "Search in buffer" })
+    vim.keymap.set("n", "<leader>sw", function()
         builtin.grep_string({ search = vim.fn.input("Grep > ") })
-    end, { desc = "Telescope grep string input" })
+    end, { desc = "Search word/string" })
+    vim.keymap.set("n", "<leader>sr", builtin.resume, { desc = "Search resume (last picker)" })
+    vim.keymap.set("n", "<leader>s\"", builtin.registers, { desc = "Search registers (yanks/deletes)" })
 end
 
 ---------------------------------------------------------------------------
@@ -54,12 +57,12 @@ end
 local harpoon_ok, mark = pcall(require, "harpoon.mark")
 if harpoon_ok then
     local ui = require("harpoon.ui")
-    vim.keymap.set("n", "<leader><leader>a", mark.add_file, { desc = "Harpoon: Add file" })
-    vim.keymap.set("n", "<leader><leader>e", ui.toggle_quick_menu, { desc = "Harpoon: Toggle menu" })
-    vim.keymap.set("n", "<leader><leader>h", function() ui.nav_file(1) end, { desc = "Harpoon: Nav file 1" })
-    vim.keymap.set("n", "<leader><leader>t", function() ui.nav_file(2) end, { desc = "Harpoon: Nav file 2" })
-    vim.keymap.set("n", "<leader><leader>n", function() ui.nav_file(3) end, { desc = "Harpoon: Nav file 3" })
-    vim.keymap.set("n", "<leader><leader>s", function() ui.nav_file(4) end, { desc = "Harpoon: Nav file 4" })
+    vim.keymap.set("n", "<leader>a", mark.add_file, { desc = "Harpoon: Add file" })
+    vim.keymap.set("n", "<C-e>", ui.toggle_quick_menu, { desc = "Harpoon: Toggle menu" })
+    vim.keymap.set("n", "<leader>1", function() ui.nav_file(1) end, { desc = "Harpoon: File 1" })
+    vim.keymap.set("n", "<leader>2", function() ui.nav_file(2) end, { desc = "Harpoon: File 2" })
+    vim.keymap.set("n", "<leader>3", function() ui.nav_file(3) end, { desc = "Harpoon: File 3" })
+    vim.keymap.set("n", "<leader>4", function() ui.nav_file(4) end, { desc = "Harpoon: File 4" })
 end
 
 ---------------------------------------------------------------------------
@@ -68,9 +71,9 @@ end
 vim.keymap.set("n", "<leader>u", vim.cmd.UndotreeToggle, { desc = "Toggle UndoTree" })
 
 ---------------------------------------------------------------------------
--- Fugitive
+-- Git (Fugitive)
 ---------------------------------------------------------------------------
-vim.keymap.set("n", "<leader>gs", vim.cmd.Git, { desc = "Git status" })
+vim.keymap.set("n", "<leader>gg", vim.cmd.Git, { desc = "Git status (Fugitive)" })
 
 ---------------------------------------------------------------------------
 -- Conform (Formatting)
@@ -92,18 +95,31 @@ end
 vim.api.nvim_create_autocmd("LspAttach", {
     group = vim.api.nvim_create_augroup("UserLspConfig", {}),
     callback = function(ev)
-        vim.bo[ev.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
+        local opts = function(desc)
+            return { buffer = ev.buf, desc = desc }
+        end
 
-        vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = ev.buf, desc = "Go to Definition" })
-        vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = ev.buf, desc = "Hover Documentation" })
-        vim.keymap.set("n", "<leader>vws", vim.lsp.buf.workspace_symbol, { buffer = ev.buf, desc = "Workspace Symbol" })
-        vim.keymap.set("n", "<leader>vd", vim.diagnostic.open_float, { buffer = ev.buf, desc = "Open Diagnostic Float" })
-        vim.keymap.set("n", "[d", vim.diagnostic.goto_next, { buffer = ev.buf, desc = "Next Diagnostic" })
-        vim.keymap.set("n", "]d", vim.diagnostic.goto_prev, { buffer = ev.buf, desc = "Previous Diagnostic" })
-        vim.keymap.set("n", "<leader>vca", vim.lsp.buf.code_action, { buffer = ev.buf, desc = "Code Action" })
-        vim.keymap.set("n", "<leader>vrr", vim.lsp.buf.references, { buffer = ev.buf, desc = "References" })
-        vim.keymap.set("n", "<leader>vrn", vim.lsp.buf.rename, { buffer = ev.buf, desc = "Rename" })
-        vim.keymap.set("i", "<C-h>", vim.lsp.buf.signature_help, { buffer = ev.buf, desc = "Signature Help" })
+        -- Navigation
+        vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts("Go to definition"))
+        vim.keymap.set("n", "gD", vim.lsp.buf.declaration, opts("Go to declaration"))
+        vim.keymap.set("n", "gI", vim.lsp.buf.implementation, opts("Go to implementation"))
+        vim.keymap.set("n", "gy", vim.lsp.buf.type_definition, opts("Go to type definition"))
+        vim.keymap.set("n", "gr", vim.lsp.buf.references, opts("Find references"))
+        vim.keymap.set("n", "K", vim.lsp.buf.hover, opts("Hover documentation"))
+        vim.keymap.set("n", "gK", vim.lsp.buf.signature_help, opts("Signature help"))
+        vim.keymap.set("i", "<C-s>", vim.lsp.buf.signature_help, opts("Signature help"))
+
+        -- Actions
+        vim.keymap.set("n", "<leader>cr", vim.lsp.buf.rename, opts("Rename symbol"))
+        vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, opts("Code action"))
+        vim.keymap.set("n", "<leader>cd", vim.diagnostic.open_float, opts("Line diagnostics"))
+
+        -- Workspace
+        vim.keymap.set("n", "<leader>cs", vim.lsp.buf.workspace_symbol, opts("Workspace symbols"))
+
+        -- Diagnostics navigation
+        vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts("Next diagnostic"))
+        vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts("Previous diagnostic"))
     end,
 })
 
@@ -116,13 +132,46 @@ if ls_ok then
         if ls.expand_or_jumpable() then
             ls.expand_or_jump()
         end
-    end, { silent = true })
+    end, { silent = true, desc = "Snippet: Expand or jump forward" })
 
     vim.keymap.set({ "i", "s" }, "<C-j>", function()
         if ls.jumpable(-1) then
             ls.jump(-1)
         end
-    end, { silent = true })
+    end, { silent = true, desc = "Snippet: Jump backward" })
+end
+
+---------------------------------------------------------------------------
+-- Todo Comments
+---------------------------------------------------------------------------
+local todo_ok, todo = pcall(require, "todo-comments")
+if todo_ok then
+    vim.keymap.set("n", "]t", function() todo.jump_next() end, { desc = "Next todo comment" })
+    vim.keymap.set("n", "[t", function() todo.jump_prev() end, { desc = "Previous todo comment" })
+    vim.keymap.set("n", "<leader>st", "<Cmd>TodoTelescope<CR>", { desc = "Search todos" })
+end
+
+---------------------------------------------------------------------------
+-- DAP (Debugging)
+---------------------------------------------------------------------------
+local dap_ok, dap = pcall(require, "dap")
+if dap_ok then
+    vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = "Toggle breakpoint" })
+    vim.keymap.set("n", "<leader>dB", function()
+        dap.set_breakpoint(vim.fn.input("Breakpoint condition: "))
+    end, { desc = "Conditional breakpoint" })
+    vim.keymap.set("n", "<leader>dc", dap.continue, { desc = "Continue / Start" })
+    vim.keymap.set("n", "<leader>di", dap.step_into, { desc = "Step into" })
+    vim.keymap.set("n", "<leader>dO", dap.step_over, { desc = "Step over" })
+    vim.keymap.set("n", "<leader>do", dap.step_out, { desc = "Step out" })
+    vim.keymap.set("n", "<leader>dl", dap.run_last, { desc = "Run last" })
+    vim.keymap.set("n", "<leader>dq", dap.terminate, { desc = "Terminate" })
+
+    local dapui_ok, dapui = pcall(require, "dapui")
+    if dapui_ok then
+        vim.keymap.set("n", "<leader>du", dapui.toggle, { desc = "Toggle DAP UI" })
+        vim.keymap.set({ "n", "v" }, "<leader>de", dapui.eval, { desc = "Evaluate expression" })
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -130,15 +179,15 @@ end
 ---------------------------------------------------------------------------
 local opencode_ok, opencode = pcall(require, "opencode")
 if opencode_ok then
-    vim.keymap.set({ "n", "x" }, "<leader>oa", function() opencode.ask("@this: ", { submit = true }) end, { desc = "Opencode: Ask" })
-    vim.keymap.set("n", "<leader>ob", function() opencode.ask("@buffer: ", { submit = true }) end, { desc = "Opencode: Ask (Whole Buffer)" })
-    vim.keymap.set("n", "<leader>ov", function() opencode.ask("@visible: ", { submit = true }) end, { desc = "Opencode: Ask (Visible Text)" })
-    vim.keymap.set({ "n", "x" }, "<leader>os", function() opencode.select() end, { desc = "Opencode: Select action" })
-    vim.keymap.set({ "n", "t" }, "<leader>ot", function() opencode.toggle() end, { desc = "Opencode: Toggle" })
+    vim.keymap.set({ "n", "x" }, "<leader>oa", function() opencode.ask("@this: ", { submit = true }) end, { desc = "Ask (selection)" })
+    vim.keymap.set("n", "<leader>ob", function() opencode.ask("@buffer: ", { submit = true }) end, { desc = "Ask (whole buffer)" })
+    vim.keymap.set("n", "<leader>ov", function() opencode.ask("@visible: ", { submit = true }) end, { desc = "Ask (visible text)" })
+    vim.keymap.set({ "n", "x" }, "<leader>os", function() opencode.select() end, { desc = "Select action" })
+    vim.keymap.set({ "n", "t" }, "<leader>ot", function() opencode.toggle() end, { desc = "Toggle" })
     vim.keymap.set({ "n", "x" }, "go", function() return opencode.operator("@this ") end, { desc = "Opencode: Add range", expr = true })
     vim.keymap.set("n", "goo", function() return opencode.operator("@this ") .. "_" end, { desc = "Opencode: Add line", expr = true })
-    vim.keymap.set("n", "<leader>ou", function() opencode.command("session.half.page.up") end, { desc = "Opencode: Scroll up" })
-    vim.keymap.set("n", "<leader>od", function() opencode.command("session.half.page.down") end, { desc = "Opencode: Scroll down" })
+    vim.keymap.set("n", "<leader>ou", function() opencode.command("session.half.page.up") end, { desc = "Scroll up" })
+    vim.keymap.set("n", "<leader>od", function() opencode.command("session.half.page.down") end, { desc = "Scroll down" })
 end
 
 ---------------------------------------------------------------------------
@@ -147,8 +196,14 @@ end
 local wk_ok, wk = pcall(require, "which-key")
 if wk_ok then
     wk.add({
-        { "<leader>n", group = "Obsidian" },
-        { "<leader>f", group = "Find (Telescope)" },
-        { "<leader>?", function() wk.show() end, desc = "Show Keymaps (Which-Key)" },
+        { "<leader>c", group = "Code" },
+        { "<leader>d", group = "Debug" },
+        { "<leader>f", group = "File/Find" },
+        { "<leader>g", group = "Git" },
+        { "<leader>gh", group = "Hunks" },
+        { "<leader>gt", group = "Toggle" },
+        { "<leader>o", group = "Opencode" },
+        { "<leader>s", group = "Search", mode = { "n", "x" } },
+        { "<leader>?", function() wk.show() end, desc = "Show all keymaps" },
     })
 end

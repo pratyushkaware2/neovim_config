@@ -19,7 +19,7 @@ require("lazy").setup({
     -- Telescope
     {
         "nvim-telescope/telescope.nvim",
-        tag = "0.1.8",
+        branch = "master",
         dependencies = { "nvim-lua/plenary.nvim" },
     },
 
@@ -51,7 +51,11 @@ require("lazy").setup({
     -- Completion & Snippets
     { "hrsh7th/nvim-cmp" },
     { "hrsh7th/cmp-nvim-lsp" },
-    { "L3MON4D3/LuaSnip" },
+    { "L3MON4D3/LuaSnip", build = "make install_jsregexp" },
+
+    -- Editing
+    { "echasnovski/mini.pairs", version = "*" },
+    { "echasnovski/mini.surround", version = "*" },
 
     -- Formatting
     { "stevearc/conform.nvim" },
@@ -78,6 +82,20 @@ require("lazy").setup({
         },
     },
 
+    -- Todo
+    {
+        "folke/todo-comments.nvim",
+        dependencies = { "nvim-lua/plenary.nvim" },
+    },
+
+    -- Debugging
+    { "mfussenegger/nvim-dap" },
+    {
+        "rcarriga/nvim-dap-ui",
+        dependencies = { "mfussenegger/nvim-dap", "nvim-neotest/nvim-nio" },
+    },
+    { "nvim-neotest/nvim-nio" },
+
     -- UI
     {
         "nvim-lualine/lualine.nvim",
@@ -89,9 +107,7 @@ require("lazy").setup({
         "MeanderingProgrammer/render-markdown.nvim",
         dependencies = { "nvim-tree/nvim-web-devicons" },
     },
-    {
-        "3rd/image.nvim",
-    },
+
     {
         "folke/noice.nvim",
         dependencies = {
@@ -108,4 +124,4 @@ require("lazy").setup({
         lazy = false,
         dependencies = { "nvim-tree/nvim-web-devicons" },
     },
-})
+}, { rocks = { enabled = false } })

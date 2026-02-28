@@ -169,6 +169,30 @@ if conform_ok then
 end
 
 ---------------------------------------------------------------------------
+-- Mini.pairs (auto-close brackets/quotes)
+---------------------------------------------------------------------------
+local minipairs_ok = pcall(require, "mini.pairs")
+if minipairs_ok then
+    require("mini.pairs").setup({})
+end
+
+---------------------------------------------------------------------------
+-- Mini.surround (add/delete/replace surroundings)
+---------------------------------------------------------------------------
+local minisurround_ok = pcall(require, "mini.surround")
+if minisurround_ok then
+    require("mini.surround").setup({})
+end
+
+---------------------------------------------------------------------------
+-- Todo Comments
+---------------------------------------------------------------------------
+local todo_ok = pcall(require, "todo-comments")
+if todo_ok then
+    require("todo-comments").setup({})
+end
+
+---------------------------------------------------------------------------
 -- Gitsigns
 ---------------------------------------------------------------------------
 local gitsigns_ok, gitsigns = pcall(require, "gitsigns")
@@ -184,31 +208,34 @@ if gitsigns_ok then
             end
 
             -- Navigation
-            map("n", "]c", function()
+            map("n", "]h", function()
                 if vim.wo.diff then return "]c" end
                 vim.schedule(function() gs.next_hunk() end)
                 return "<Ignore>"
-            end, { expr = true, desc = "Git: Next hunk" })
+            end, { expr = true, desc = "Next hunk" })
 
-            map("n", "[c", function()
+            map("n", "[h", function()
                 if vim.wo.diff then return "[c" end
                 vim.schedule(function() gs.prev_hunk() end)
                 return "<Ignore>"
-            end, { expr = true, desc = "Git: Previous hunk" })
+            end, { expr = true, desc = "Previous hunk" })
 
-            -- Actions
-            map("n", "<leader>hs", gs.stage_hunk, { desc = "Git: Stage hunk" })
-            map("n", "<leader>hr", gs.reset_hunk, { desc = "Git: Reset hunk" })
-            map("v", "<leader>hs", function() gs.stage_hunk { vim.fn.line("."), vim.fn.line("v") } end, { desc = "Git: Stage hunk (visual)" })
-            map("v", "<leader>hr", function() gs.reset_hunk { vim.fn.line("."), vim.fn.line("v") } end, { desc = "Git: Reset hunk (visual)" })
-            map("n", "<leader>hS", gs.stage_buffer, { desc = "Git: Stage buffer" })
-            map("n", "<leader>hu", gs.undo_stage_hunk, { desc = "Git: Undo stage hunk" })
-            map("n", "<leader>hp", gs.preview_hunk, { desc = "Git: Preview hunk" })
-            map("n", "<leader>hb", function() gs.blame_line { full = true } end, { desc = "Git: Blame line" })
-            map("n", "<leader>tb", gs.toggle_current_line_blame, { desc = "Git: Toggle blame line" })
-            map("n", "<leader>hd", gs.diffthis, { desc = "Git: Diff this" })
-            map("n", "<leader>hD", function() gs.diffthis("~") end, { desc = "Git: Diff this (HEAD)" })
-            map("n", "<leader>td", gs.toggle_deleted, { desc = "Git: Toggle deleted" })
+            -- Actions (under <leader>g for git)
+            map("n", "<leader>ghs", gs.stage_hunk, { desc = "Stage hunk" })
+            map("n", "<leader>ghr", gs.reset_hunk, { desc = "Reset hunk" })
+            map("v", "<leader>ghs", function() gs.stage_hunk { vim.fn.line("."), vim.fn.line("v") } end, { desc = "Stage hunk (visual)" })
+            map("v", "<leader>ghr", function() gs.reset_hunk { vim.fn.line("."), vim.fn.line("v") } end, { desc = "Reset hunk (visual)" })
+            map("n", "<leader>ghS", gs.stage_buffer, { desc = "Stage buffer" })
+            map("n", "<leader>ghu", gs.undo_stage_hunk, { desc = "Undo stage hunk" })
+            map("n", "<leader>ghp", gs.preview_hunk, { desc = "Preview hunk" })
+            map("n", "<leader>ghb", function() gs.blame_line { full = true } end, { desc = "Blame line" })
+            map("n", "<leader>ghd", gs.diffthis, { desc = "Diff this" })
+            map("n", "<leader>ghD", function() gs.diffthis("~") end, { desc = "Diff this (~)" })
+            map("n", "<leader>gtb", gs.toggle_current_line_blame, { desc = "Toggle blame line" })
+            map("n", "<leader>gtd", gs.toggle_deleted, { desc = "Toggle deleted" })
+
+            -- Text object (select hunk)
+            map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", { desc = "Select hunk" })
         end,
     })
 end
@@ -222,6 +249,9 @@ if snacks_ok then
         input = { enabled = true },
         picker = { enabled = true },
         terminal = { enabled = true },
+        notifier = { enabled = false },
+        image = { enabled = true },
+        indent = { enabled = true },
     })
 end
 
@@ -230,7 +260,7 @@ end
 ---------------------------------------------------------------------------
 local opencode_ok = pcall(require, "opencode")
 if opencode_ok then
-    vim.g.opencode_opts = {}
+    vim.g.opencode_opts = { server = {} }
     vim.o.autoread = true
 end
 
@@ -291,6 +321,7 @@ local rmd_ok = pcall(require, "render-markdown")
 if rmd_ok then
     require("render-markdown").setup({
         file_types = { "markdown", "leetcode" },
+        latex = { enabled = false },
     })
     vim.api.nvim_create_autocmd("FileType", {
         pattern = { "markdown", "leetcode" },
@@ -300,20 +331,30 @@ if rmd_ok then
     })
 end
 
+
+
 ---------------------------------------------------------------------------
--- Image.nvim
+-- DAP (Debugging)
 ---------------------------------------------------------------------------
-local image_ok = pcall(require, "image")
-if image_ok then
-    require("image").setup({
-        backend = "kitty",
-        max_width = 100,
-        max_height = 12,
-        max_height_window_percentage = math.huge,
-        max_width_window_percentage = math.huge,
-        window_overlap_clear_enabled = true,
-        window_overlap_clear_ft_ignore = {},
-    })
+local dap_ok = pcall(require, "dap")
+if dap_ok then
+    local dapui_ok = pcall(require, "dapui")
+    if dapui_ok then
+        local dap = require("dap")
+        local dapui = require("dapui")
+        dapui.setup({})
+
+        -- Auto open/close UI on debug sessions
+        dap.listeners.after.event_initialized["dapui_config"] = function()
+            dapui.open()
+        end
+        dap.listeners.before.event_terminated["dapui_config"] = function()
+            dapui.close()
+        end
+        dap.listeners.before.event_exited["dapui_config"] = function()
+            dapui.close()
+        end
+    end
 end
 
 ---------------------------------------------------------------------------
