@@ -49,6 +49,8 @@ if telescope_ok then
     end, { desc = "Search word/string" })
     vim.keymap.set("n", "<leader>sr", builtin.resume, { desc = "Search resume (last picker)" })
     vim.keymap.set("n", "<leader>s\"", builtin.registers, { desc = "Search registers (yanks/deletes)" })
+    vim.keymap.set("n", "<leader>gc", builtin.git_commits, { desc = "Search commits" })
+    vim.keymap.set("n", "<leader>gbc", builtin.git_bcommits, { desc = "Search buffer commits" })
 end
 
 ---------------------------------------------------------------------------
@@ -74,6 +76,7 @@ vim.keymap.set("n", "<leader>u", vim.cmd.UndotreeToggle, { desc = "Toggle UndoTr
 -- Git (Fugitive)
 ---------------------------------------------------------------------------
 vim.keymap.set("n", "<leader>gg", vim.cmd.Git, { desc = "Git status (Fugitive)" })
+vim.keymap.set("n", "<leader>gl", "<Cmd>Git log<CR>", { desc = "Git log (Fugitive)" })
 
 ---------------------------------------------------------------------------
 -- Conform (Formatting)
