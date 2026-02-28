@@ -270,7 +270,7 @@ end
 local leetcode_ok = pcall(require, "leetcode")
 if leetcode_ok then
     require("leetcode").setup({
-        image_support = true,
+        image_support = false,
     })
 end
 
