@@ -241,6 +241,21 @@ if gitsigns_ok then
 end
 
 ---------------------------------------------------------------------------
+-- Diffview
+---------------------------------------------------------------------------
+local diffview_ok = pcall(require, "diffview")
+if diffview_ok then
+    require("diffview").setup({
+        enhanced_diff_hl = true,
+        view = {
+            default = { layout = "diff2_horizontal" },
+            merge_tool = { layout = "diff3_horizontal" },
+            file_history = { layout = "diff2_horizontal" },
+        },
+    })
+end
+
+---------------------------------------------------------------------------
 -- Snacks (opencode dependency)
 ---------------------------------------------------------------------------
 local snacks_ok, snacks = pcall(require, "snacks")

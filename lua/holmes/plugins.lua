@@ -33,6 +33,7 @@ require("lazy").setup({
     -- Git
     { "tpope/vim-fugitive" },
     { "lewis6991/gitsigns.nvim" },
+    { "sindrets/diffview.nvim", dependencies = { "nvim-lua/plenary.nvim" } },
 
     -- Undo
     { "mbbill/undotree" },

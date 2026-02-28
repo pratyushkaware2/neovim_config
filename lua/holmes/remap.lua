@@ -79,6 +79,14 @@ vim.keymap.set("n", "<leader>gg", vim.cmd.Git, { desc = "Git status (Fugitive)" 
 vim.keymap.set("n", "<leader>gl", "<Cmd>Git log<CR>", { desc = "Git log (Fugitive)" })
 
 ---------------------------------------------------------------------------
+-- Diffview (VS Code-like diff viewer)
+---------------------------------------------------------------------------
+vim.keymap.set("n", "<leader>gd", "<Cmd>DiffviewOpen<CR>", { desc = "Diffview: Open (working changes)" })
+vim.keymap.set("n", "<leader>gD", "<Cmd>DiffviewClose<CR>", { desc = "Diffview: Close" })
+vim.keymap.set("n", "<leader>gf", "<Cmd>DiffviewFileHistory %<CR>", { desc = "Diffview: File history (current)" })
+vim.keymap.set("n", "<leader>gL", "<Cmd>DiffviewFileHistory<CR>", { desc = "Diffview: File history (all)" })
+
+---------------------------------------------------------------------------
 -- Conform (Formatting)
 ---------------------------------------------------------------------------
 local conform_ok, conform = pcall(require, "conform")
@@ -280,6 +288,7 @@ if wk_ok then
         { "<leader>d", group = "Debug" },
         { "<leader>f", group = "File/Find" },
         { "<leader>g", group = "Git" },
+        { "<leader>gb", group = "Buffer" },
         { "<leader>gh", group = "Hunks" },
         { "<leader>gt", group = "Toggle" },
         { "<leader>o", group = "Opencode" },
