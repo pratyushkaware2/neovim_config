@@ -193,6 +193,83 @@ end
 ---------------------------------------------------------------------------
 -- Which-Key group labels
 ---------------------------------------------------------------------------
+-- Image hover (snacks.nvim) — works in leetcode and markdown buffers
+---------------------------------------------------------------------------
+local _img_hover = nil
+local _img_hover_close = function()
+    if _img_hover then
+        if _img_hover.win and _img_hover.win:valid() then
+            _img_hover.win:close()
+        end
+        _img_hover = nil
+    end
+end
+
+vim.keymap.set("n", "<leader>ci", function()
+    local Snacks = require("snacks")
+
+    -- If already showing hover on this buffer, close it (toggle behavior)
+    if _img_hover and _img_hover.buf == vim.api.nvim_get_current_buf() then
+        _img_hover_close()
+        return
+    end
+    _img_hover_close()
+
+    -- First try the native snacks hover (works for markdown with treesitter)
+    -- For leetcode buffers, extract the URL from the line text directly
+    local line = vim.api.nvim_get_current_line()
+    local src = line:match("%]%((https?://%S+)%)")
+        or line:match("%(([^%)]+%.png)%)")
+        or line:match("%(([^%)]+%.jpg)%)")
+        or line:match("%(([^%)]+%.jpeg)%)")
+        or line:match("%(([^%)]+%.gif)%)")
+        or line:match("%(([^%)]+%.webp)%)")
+
+    if not src then
+        -- Fallback to snacks native hover for proper markdown buffers
+        Snacks.image.hover()
+        return
+    end
+
+    -- Create a floating window and render the image using snacks internals
+    local win = Snacks.win(Snacks.win.resolve(Snacks.image.config.doc, "snacks_image", {
+        show = false,
+        enter = false,
+        wo = { winblend = Snacks.image.terminal.env().placeholders and 0 or nil },
+    }))
+    win:open_buf()
+
+    local updated = false
+    local opts = Snacks.config.merge({}, Snacks.image.config.doc, {
+        on_update_pre = function()
+            if _img_hover and not updated then
+                updated = true
+                local loc = _img_hover.img:state().loc
+                win.opts.width = loc.width
+                win.opts.height = loc.height
+                win:show()
+            end
+        end,
+        inline = false,
+    })
+
+    _img_hover = {
+        win = win,
+        buf = vim.api.nvim_get_current_buf(),
+        img = Snacks.image.placement.new(win.buf, src, opts),
+    }
+
+    -- Auto-close on cursor move, mode change, or buffer leave
+    vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged", "BufLeave" }, {
+        group = vim.api.nvim_create_augroup("leetcode_image_hover", { clear = true }),
+        callback = function()
+            _img_hover_close()
+            return true -- remove the autocmd
+        end,
+    })
+end, { desc = "Show image under cursor" })
+
+---------------------------------------------------------------------------
 local wk_ok, wk = pcall(require, "which-key")
 if wk_ok then
     wk.add({
