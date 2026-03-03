@@ -101,6 +101,14 @@ if conform_ok then
 end
 
 ---------------------------------------------------------------------------
+-- Python env
+---------------------------------------------------------------------------
+local venv_selector_ok = pcall(require, "venv-selector")
+if venv_selector_ok then
+    vim.keymap.set("n", "<leader>cv", "<Cmd>VenvSelect<CR>", { desc = "Select Python virtualenv" })
+end
+
+---------------------------------------------------------------------------
 -- LSP (buffer-local keymaps on LspAttach)
 ---------------------------------------------------------------------------
 vim.api.nvim_create_autocmd("LspAttach", {
