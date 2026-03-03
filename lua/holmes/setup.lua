@@ -139,6 +139,25 @@ if mason_ok then
     })
 end
 
+local venv_selector_ok, venv_selector = pcall(require, "venv-selector")
+if venv_selector_ok then
+    venv_selector.setup({
+        options = {
+            cached_venv_automatic_activation = true,
+            notify_user_on_venv_activation = false,
+        },
+    })
+
+    vim.api.nvim_create_autocmd("VimEnter", {
+        callback = function()
+            local python_path = vim.fn.getcwd() .. "/.venv/bin/python"
+            if vim.fn.executable(python_path) == 1 and venv_selector.python() ~= python_path then
+                venv_selector.activate_from_path(python_path, "venv")
+            end
+        end,
+    })
+end
+
 ---------------------------------------------------------------------------
 -- Conform (Formatting)
 ---------------------------------------------------------------------------
