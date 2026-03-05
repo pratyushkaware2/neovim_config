@@ -31,6 +31,9 @@ vim.opt.updatetime = 50
 vim.opt.conceallevel = 1
 vim.opt.guifont = "JetBrainsMono Nerd Font:h12"
 
+vim.opt.matchpairs = "(:),{:},[:]"
+vim.cmd("runtime macros/matchit.vim")
+
 -- Disable unused providers
 vim.g.loaded_node_provider = 0
 vim.g.loaded_perl_provider = 0

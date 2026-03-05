@@ -54,17 +54,26 @@ if telescope_ok then
 end
 
 ---------------------------------------------------------------------------
+-- Buffers (Bufferline)
+---------------------------------------------------------------------------
+vim.keymap.set("n", "<leader>bn", "<Cmd>BufferLineCycleNext<CR>", { desc = "Buffer: Next" })
+vim.keymap.set("n", "<leader>bp", "<Cmd>BufferLineCyclePrev<CR>", { desc = "Buffer: Previous" })
+vim.keymap.set("n", "<leader>bc", "<Cmd>BufferLinePickClose<CR>", { desc = "Buffer: Pick close" })
+vim.keymap.set("n", "<leader>bb", "<Cmd>BufferLinePick<CR>", { desc = "Buffer: Pick" })
+
+
+---------------------------------------------------------------------------
 -- Harpoon
 ---------------------------------------------------------------------------
 local harpoon_ok, mark = pcall(require, "harpoon.mark")
 if harpoon_ok then
     local ui = require("harpoon.ui")
-    vim.keymap.set("n", "<leader>a", mark.add_file, { desc = "Harpoon: Add file" })
-    vim.keymap.set("n", "<C-e>", ui.toggle_quick_menu, { desc = "Harpoon: Toggle menu" })
-    vim.keymap.set("n", "<leader>1", function() ui.nav_file(1) end, { desc = "Harpoon: File 1" })
-    vim.keymap.set("n", "<leader>2", function() ui.nav_file(2) end, { desc = "Harpoon: File 2" })
-    vim.keymap.set("n", "<leader>3", function() ui.nav_file(3) end, { desc = "Harpoon: File 3" })
-    vim.keymap.set("n", "<leader>4", function() ui.nav_file(4) end, { desc = "Harpoon: File 4" })
+    vim.keymap.set("n", "<leader>ha", mark.add_file, { desc = "Harpoon: Add file" })
+    vim.keymap.set("n", "<leader>hh", ui.toggle_quick_menu, { desc = "Harpoon: Toggle menu" })
+    vim.keymap.set("n", "<leader>h1", function() ui.nav_file(1) end, { desc = "Harpoon: File 1" })
+    vim.keymap.set("n", "<leader>h2", function() ui.nav_file(2) end, { desc = "Harpoon: File 2" })
+    vim.keymap.set("n", "<leader>h3", function() ui.nav_file(3) end, { desc = "Harpoon: File 3" })
+    vim.keymap.set("n", "<leader>h4", function() ui.nav_file(4) end, { desc = "Harpoon: File 4" })
 end
 
 ---------------------------------------------------------------------------
@@ -292,6 +301,7 @@ end, { desc = "Show image under cursor" })
 local wk_ok, wk = pcall(require, "which-key")
 if wk_ok then
     wk.add({
+        { "<leader>b", group = "Buffer" },
         { "<leader>c", group = "Code" },
         { "<leader>d", group = "Debug" },
         { "<leader>f", group = "File/Find" },
@@ -299,6 +309,7 @@ if wk_ok then
         { "<leader>gb", group = "Buffer" },
         { "<leader>gh", group = "Hunks" },
         { "<leader>gt", group = "Toggle" },
+        { "<leader>h", group = "Harpoon" },
         { "<leader>o", group = "Opencode" },
         { "<leader>s", group = "Search", mode = { "n", "x" } },
         { "<leader>?", function() wk.show() end, desc = "Show all keymaps" },

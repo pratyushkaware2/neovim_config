@@ -25,6 +25,7 @@ require("lazy").setup({
 
     -- Treesitter
     { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
+    { "andymass/vim-matchup" },
 
     -- Navigation
     { "theprimeagen/harpoon" },
@@ -56,8 +57,16 @@ require("lazy").setup({
     { "L3MON4D3/LuaSnip", build = "make install_jsregexp" },
 
     -- Editing
-    { "echasnovski/mini.pairs", version = "*" },
     { "echasnovski/mini.surround", version = "*" },
+    {
+        "m4xshen/hardtime.nvim",
+        dependencies = { "MunifTanjim/nui.nvim", "nvim-lua/plenary.nvim" },
+    },
+    {
+        "akinsho/bufferline.nvim",
+        version = "*",
+        dependencies = { "nvim-tree/nvim-web-devicons" },
+    },
 
     -- Formatting
     { "stevearc/conform.nvim" },

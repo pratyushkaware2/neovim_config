@@ -31,8 +31,16 @@ if ts_ok then
             enable = true,
             additional_vim_regex_highlighting = false,
         },
+        matchup = {
+            enable = true,
+        },
     })
 end
+
+---------------------------------------------------------------------------
+-- Matchup
+---------------------------------------------------------------------------
+vim.g.matchup_matchparen_offscreen = { method = "popup" }
 
 ---------------------------------------------------------------------------
 -- Mason + LSP + Completion
@@ -190,17 +198,24 @@ end
 ---------------------------------------------------------------------------
 -- Mini.pairs (auto-close brackets/quotes)
 ---------------------------------------------------------------------------
-local minipairs_ok = pcall(require, "mini.pairs")
-if minipairs_ok then
-    require("mini.pairs").setup({})
-end
-
 ---------------------------------------------------------------------------
 -- Mini.surround (add/delete/replace surroundings)
 ---------------------------------------------------------------------------
 local minisurround_ok = pcall(require, "mini.surround")
 if minisurround_ok then
     require("mini.surround").setup({})
+end
+
+---------------------------------------------------------------------------
+-- Hardtime
+---------------------------------------------------------------------------
+local hardtime_ok = pcall(require, "hardtime")
+if hardtime_ok then
+    require("hardtime").setup({
+        hint = true,
+        notification = true,
+        callback = vim.notify,
+    })
 end
 
 ---------------------------------------------------------------------------
@@ -345,6 +360,23 @@ if lualine_ok then
         winbar = {},
         inactive_winbar = {},
         extensions = {},
+    })
+end
+
+---------------------------------------------------------------------------
+-- Bufferline
+---------------------------------------------------------------------------
+local bufferline_ok, bufferline = pcall(require, "bufferline")
+if bufferline_ok then
+    bufferline.setup({
+        options = {
+            mode = "buffers",
+            diagnostics = "nvim_lsp",
+            separator_style = "slant",
+            show_close_icon = false,
+            show_buffer_close_icons = true,
+            always_show_bufferline = true,
+        },
     })
 end
 
