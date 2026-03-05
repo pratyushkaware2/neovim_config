@@ -326,6 +326,28 @@ end
 ---------------------------------------------------------------------------
 -- Lualine
 ---------------------------------------------------------------------------
+local screenkey_ok, screenkey = pcall(require, "screenkey")
+if screenkey_ok then
+    screenkey.setup({
+        disable = {
+            filetypes = {},
+            buftypes = { "terminal" },
+        },
+        filter = function(keys)
+            if vim.fn.mode() == "i" then
+                return {}
+            end
+            for i, k in ipairs(keys) do
+                if vim.g.screenkey_statusline_component and k.key == "%" then
+                    keys[i].key = "%%"
+                end
+            end
+            return keys
+        end,
+    })
+    vim.g.screenkey_statusline_component = true
+end
+
 local lualine_ok = pcall(require, "lualine")
 if lualine_ok then
     require("lualine").setup({
@@ -343,8 +365,23 @@ if lualine_ok then
         sections = {
             lualine_a = { "mode" },
             lualine_b = { "branch", "diff", "diagnostics" },
-            lualine_c = { "filename" },
-            lualine_x = { "encoding", "fileformat", "filetype" },
+            lualine_c = {
+                {
+                    "filename",
+                    path = 1,
+                    shorting_target = 40,
+                },
+                function()
+                    if not screenkey_ok then
+                        return ""
+                    end
+                    if not screenkey.get_keys then
+                        return ""
+                    end
+                    return screenkey.get_keys()
+                end,
+            },
+            lualine_x = { "searchcount", "encoding", "fileformat", "filetype" },
             lualine_y = { "progress" },
             lualine_z = { "location" },
         },

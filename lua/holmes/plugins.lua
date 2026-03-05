@@ -112,6 +112,7 @@ require("lazy").setup({
         "nvim-lualine/lualine.nvim",
         dependencies = { "nvim-tree/nvim-web-devicons" },
     },
+    { "NStefan002/screenkey.nvim", version = "*" },
     { "nvim-tree/nvim-web-devicons" },
     { "echasnovski/mini.icons", version = "*" },
     {
