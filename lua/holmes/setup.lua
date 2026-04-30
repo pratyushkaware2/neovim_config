@@ -523,3 +523,14 @@ if nvimtree_ok then
         },
     })
 end
+
+---------------------------------------------------------------------------
+-- Telescope
+---------------------------------------------------------------------------
+local telescope_ok, telescope = pcall(require, "telescope")
+if telescope_ok then
+    telescope.setup({
+        -- any defaults you might want to add later can go here
+    })
+    pcall(telescope.load_extension, "live_grep_args")
+end

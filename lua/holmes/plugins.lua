@@ -20,7 +20,10 @@ require("lazy").setup({
     {
         "nvim-telescope/telescope.nvim",
         branch = "master",
-        dependencies = { "nvim-lua/plenary.nvim" },
+        dependencies = { 
+            "nvim-lua/plenary.nvim",
+            "nvim-telescope/telescope-live-grep-args.nvim",
+        },
     },
 
     -- Treesitter
@@ -58,6 +61,7 @@ require("lazy").setup({
 
     -- Editing
     { "echasnovski/mini.surround", version = "*" },
+    { "tpope/vim-repeat" },
     {
         "m4xshen/hardtime.nvim",
         dependencies = { "MunifTanjim/nui.nvim", "nvim-lua/plenary.nvim" },

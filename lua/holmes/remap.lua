@@ -3,6 +3,24 @@
 
 vim.g.mapleader = " "
 
+local function set_repeat(sequence, count)
+    if vim.fn.exists("*repeat#set") == 1 then
+        vim.fn["repeat#set"](sequence, count)
+    end
+end
+
+local function set_repeatable_map(lhs, plug_name, rhs, opts)
+    local plug = "<Plug>(" .. plug_name .. ")"
+    local base_opts = vim.tbl_extend("force", { silent = true }, opts or {})
+
+    vim.keymap.set("n", plug, function()
+        rhs(vim.v.count1)
+        set_repeat("\\<Plug>(" .. plug_name .. ")", vim.v.count)
+    end, base_opts)
+
+    vim.keymap.set("n", lhs, plug, vim.tbl_extend("force", base_opts, { remap = true }))
+end
+
 ---------------------------------------------------------------------------
 -- General
 ---------------------------------------------------------------------------
@@ -24,6 +42,18 @@ vim.keymap.set("n", "<C-h>", "<Cmd>TmuxNavigateLeft<CR>", { desc = "Navigate lef
 vim.keymap.set("n", "<C-j>", "<Cmd>TmuxNavigateDown<CR>", { desc = "Navigate down" })
 vim.keymap.set("n", "<C-k>", "<Cmd>TmuxNavigateUp<CR>", { desc = "Navigate up" })
 vim.keymap.set("n", "<C-l>", "<Cmd>TmuxNavigateRight<CR>", { desc = "Navigate right" })
+set_repeatable_map("<C-w>>", "HolmesWindowWidthIncrease", function(count)
+    vim.cmd("vertical resize +" .. count)
+end, { desc = "Window: Increase width" })
+set_repeatable_map("<C-w><", "HolmesWindowWidthDecrease", function(count)
+    vim.cmd("vertical resize -" .. count)
+end, { desc = "Window: Decrease width" })
+set_repeatable_map("<C-w>+", "HolmesWindowHeightIncrease", function(count)
+    vim.cmd("resize +" .. count)
+end, { desc = "Window: Increase height" })
+set_repeatable_map("<C-w>-", "HolmesWindowHeightDecrease", function(count)
+    vim.cmd("resize -" .. count)
+end, { desc = "Window: Decrease height" })
 
 -- Open tmux split in current directory
 vim.keymap.set("n", "<leader>t", function()
@@ -37,7 +67,15 @@ end, { desc = "Open tmux terminal split" })
 local telescope_ok, builtin = pcall(require, "telescope.builtin")
 if telescope_ok then
     vim.keymap.set("n", "<leader>ff", builtin.find_files, { desc = "Find files" })
-    vim.keymap.set("n", "<leader>/", builtin.live_grep, { desc = "Live grep" })
+    
+    vim.keymap.set("n", "<leader>/", function()
+        local ext = require("telescope").extensions
+        if ext.live_grep_args then
+            ext.live_grep_args.live_grep_args()
+        else
+            builtin.live_grep()
+        end
+    end, { desc = "Live grep (with args)" })
     vim.keymap.set("n", "<leader>,", builtin.buffers, { desc = "Switch buffer" })
     vim.keymap.set("n", "<leader>fb", builtin.buffers, { desc = "Find buffers" })
     vim.keymap.set("n", "<leader>sh", builtin.help_tags, { desc = "Search help" })
@@ -56,8 +94,14 @@ end
 ---------------------------------------------------------------------------
 -- Buffers (Bufferline)
 ---------------------------------------------------------------------------
-vim.keymap.set("n", "<leader>bn", "<Cmd>BufferLineCycleNext<CR>", { desc = "Buffer: Next" })
-vim.keymap.set("n", "<leader>bp", "<Cmd>BufferLineCyclePrev<CR>", { desc = "Buffer: Previous" })
+set_repeatable_map("<leader>bn", "HolmesBufferNext", function(count)
+    for _ = 1, count do vim.cmd("BufferLineCycleNext") end
+end, { desc = "Buffer: Next" })
+set_repeatable_map("<leader>bp", "HolmesBufferPrev", function(count)
+    for _ = 1, count do vim.cmd("BufferLineCyclePrev") end
+end, { desc = "Buffer: Previous" })
+vim.keymap.set("n", "<leader><Tab>", "<Plug>(HolmesBufferNext)", { remap = true, desc = "Buffer: Next" })
+vim.keymap.set("n", "<leader><S-Tab>", "<Plug>(HolmesBufferPrev)", { remap = true, desc = "Buffer: Previous" })
 vim.keymap.set("n", "<leader>bc", "<Cmd>BufferLinePickClose<CR>", { desc = "Buffer: Pick close" })
 vim.keymap.set("n", "<leader>bb", "<Cmd>BufferLinePick<CR>", { desc = "Buffer: Pick" })
 
@@ -145,9 +189,22 @@ vim.api.nvim_create_autocmd("LspAttach", {
         -- Workspace
         vim.keymap.set("n", "<leader>cs", vim.lsp.buf.workspace_symbol, opts("Workspace symbols"))
 
-        -- Diagnostics navigation
-        vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts("Next diagnostic"))
-        vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts("Previous diagnostic"))
+        -- Diagnostics navigation (dot-repeatable)
+        local function repeatable_buf_map(lhs, plug_name, fn, desc)
+            local plug = "<Plug>(" .. plug_name .. ")"
+            vim.keymap.set("n", plug, function()
+                fn(vim.v.count1)
+                set_repeat("\\<Plug>(" .. plug_name .. ")", vim.v.count)
+            end, { buffer = ev.buf, silent = true, desc = desc })
+            vim.keymap.set("n", lhs, plug, { buffer = ev.buf, remap = true, desc = desc })
+        end
+
+        repeatable_buf_map("]d", "HolmesDiagNext", function(count)
+            for _ = 1, count do vim.diagnostic.goto_next() end
+        end, "Next diagnostic")
+        repeatable_buf_map("[d", "HolmesDiagPrev", function(count)
+            for _ = 1, count do vim.diagnostic.goto_prev() end
+        end, "Previous diagnostic")
     end,
 })
 
@@ -174,8 +231,12 @@ end
 ---------------------------------------------------------------------------
 local todo_ok, todo = pcall(require, "todo-comments")
 if todo_ok then
-    vim.keymap.set("n", "]t", function() todo.jump_next() end, { desc = "Next todo comment" })
-    vim.keymap.set("n", "[t", function() todo.jump_prev() end, { desc = "Previous todo comment" })
+    set_repeatable_map("]t", "HolmesTodoNext", function(count)
+        for _ = 1, count do todo.jump_next() end
+    end, { desc = "Next todo comment" })
+    set_repeatable_map("[t", "HolmesTodoPrev", function(count)
+        for _ = 1, count do todo.jump_prev() end
+    end, { desc = "Previous todo comment" })
     vim.keymap.set("n", "<leader>st", "<Cmd>TodoTelescope<CR>", { desc = "Search todos" })
 end
 
@@ -189,9 +250,15 @@ if dap_ok then
         dap.set_breakpoint(vim.fn.input("Breakpoint condition: "))
     end, { desc = "Conditional breakpoint" })
     vim.keymap.set("n", "<leader>dc", dap.continue, { desc = "Continue / Start" })
-    vim.keymap.set("n", "<leader>di", dap.step_into, { desc = "Step into" })
-    vim.keymap.set("n", "<leader>dO", dap.step_over, { desc = "Step over" })
-    vim.keymap.set("n", "<leader>do", dap.step_out, { desc = "Step out" })
+    set_repeatable_map("<leader>di", "HolmesDapStepInto", function()
+        dap.step_into()
+    end, { desc = "Step into" })
+    set_repeatable_map("<leader>dO", "HolmesDapStepOver", function()
+        dap.step_over()
+    end, { desc = "Step over" })
+    set_repeatable_map("<leader>do", "HolmesDapStepOut", function()
+        dap.step_out()
+    end, { desc = "Step out" })
     vim.keymap.set("n", "<leader>dl", dap.run_last, { desc = "Run last" })
     vim.keymap.set("n", "<leader>dq", dap.terminate, { desc = "Terminate" })
 
@@ -214,8 +281,16 @@ if opencode_ok then
     vim.keymap.set({ "n", "t" }, "<leader>ot", function() opencode.toggle() end, { desc = "Toggle" })
     vim.keymap.set({ "n", "x" }, "go", function() return opencode.operator("@this ") end, { desc = "Opencode: Add range", expr = true })
     vim.keymap.set("n", "goo", function() return opencode.operator("@this ") .. "_" end, { desc = "Opencode: Add line", expr = true })
-    vim.keymap.set("n", "<leader>ou", function() opencode.command("session.half.page.up") end, { desc = "Scroll up" })
-    vim.keymap.set("n", "<leader>od", function() opencode.command("session.half.page.down") end, { desc = "Scroll down" })
+    set_repeatable_map("<leader>ou", "HolmesOpencodeHalfPageUp", function(count)
+        for _ = 1, count do
+            opencode.command("session.half.page.up")
+        end
+    end, { desc = "Scroll up" })
+    set_repeatable_map("<leader>od", "HolmesOpencodeHalfPageDown", function(count)
+        for _ = 1, count do
+            opencode.command("session.half.page.down")
+        end
+    end, { desc = "Scroll down" })
 end
 
 ---------------------------------------------------------------------------
