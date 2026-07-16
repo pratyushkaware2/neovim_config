@@ -44,7 +44,7 @@ nvim
 - **Completion**: [nvim-cmp](https://github.com/hrsh7th/nvim-cmp) with snippets support.
 - **Git Integration**: [vim-fugitive](https://github.com/tpope/vim-fugitive) and [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim).
 - **UI Enhancements**: Lualine, Noice, Which-key, and Web-devicons.
-- **Productivity**: Harpoon, Undotree, [Obsidian.nvim](https://github.com/epwalsh/obsidian.nvim), [image.nvim](https://github.com/3rd/image.nvim), [render-markdown.nvim](https://github.com/MeanderingProgrammer/render-markdown.nvim), and [leetcode.nvim](https://github.com/kawre/leetcode.nvim).
+- **Productivity**: Harpoon, Undotree, [Obsidian.nvim](https://github.com/epwalsh/obsidian.nvim), [image.nvim](https://github.com/3rd/image.nvim), [render-markdown.nvim](https://github.com/MeanderingProgrammer/render-markdown.nvim).
 
 ## Custom Keymaps
 

@@ -28,6 +28,11 @@ vim.opt.isfname:append("@-@")
 
 vim.opt.updatetime = 50
 
+-- Paste handling: ensure large pastes aren't truncated
+vim.opt.ttimeout = true
+vim.opt.ttimeoutlen = 10      -- fast terminal key-code recognition
+vim.opt.maxmempattern = 2000  -- allow larger pattern matching memory (KB)
+
 vim.opt.conceallevel = 1
 vim.opt.guifont = "JetBrainsMono Nerd Font:h12"
 

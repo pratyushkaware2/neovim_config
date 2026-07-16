@@ -5,8 +5,12 @@
 ---------------------------------------------------------------------------
 -- Colorscheme
 ---------------------------------------------------------------------------
+require("rose-pine").setup({
+    variant = "moon",
+})
+
 function ColorMyPencils(color)
-    color = color or "gruvbox"
+    color = color or "rose-pine"
     vim.opt.background = "dark"
     pcall(vim.cmd.colorscheme, color)
     vim.api.nvim_set_hl(0, "NotifyBackground", { link = "Normal" })
@@ -314,16 +318,6 @@ if opencode_ok then
 end
 
 ---------------------------------------------------------------------------
--- LeetCode
----------------------------------------------------------------------------
-local leetcode_ok = pcall(require, "leetcode")
-if leetcode_ok then
-    require("leetcode").setup({
-        image_support = false,
-    })
-end
-
----------------------------------------------------------------------------
 -- Lualine
 ---------------------------------------------------------------------------
 local screenkey_ok, screenkey = pcall(require, "screenkey")
@@ -423,11 +417,11 @@ end
 local rmd_ok = pcall(require, "render-markdown")
 if rmd_ok then
     require("render-markdown").setup({
-        file_types = { "markdown", "leetcode" },
+        file_types = { "markdown" },
         latex = { enabled = false },
     })
     vim.api.nvim_create_autocmd("FileType", {
-        pattern = { "markdown", "leetcode" },
+        pattern = { "markdown" },
         callback = function()
             vim.treesitter.start()
         end,
@@ -520,6 +514,25 @@ if nvimtree_ok then
         },
         filters = {
             dotfiles = false,
+        },
+    })
+end
+
+---------------------------------------------------------------------------
+-- Cloak (hide .env secrets)
+---------------------------------------------------------------------------
+local cloak_ok = pcall(require, "cloak")
+if cloak_ok then
+    require("cloak").setup({
+        enabled = true,
+        cloak_character = "*",
+        highlight_group = "Comment",
+        cloak_telescope = true,
+        patterns = {
+            {
+                file_pattern = ".env*",
+                cloak_pattern = "=.+",
+            },
         },
     })
 end

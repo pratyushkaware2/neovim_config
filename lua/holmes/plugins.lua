@@ -43,6 +43,7 @@ require("lazy").setup({
     { "mbbill/undotree" },
 
     -- Colorschemes
+    { "rose-pine/neovim", name = "rose-pine" },
     { "ellisonleao/gruvbox.nvim" },
     { "xero/miasma.nvim" },
     { "folke/tokyonight.nvim" },
@@ -87,16 +88,6 @@ require("lazy").setup({
         },
     },
 
-    -- LeetCode
-    {
-        "kawre/leetcode.nvim",
-        build = ":TSUpdate html",
-        dependencies = {
-            "nvim-treesitter/nvim-treesitter",
-            "MunifTanjim/nui.nvim",
-        },
-    },
-
     -- Todo
     {
         "folke/todo-comments.nvim",
@@ -132,6 +123,9 @@ require("lazy").setup({
         },
     },
     { "folke/which-key.nvim" },
+
+    -- Secrets
+    { "laytan/cloak.nvim" },
 
     -- File explorer
     {

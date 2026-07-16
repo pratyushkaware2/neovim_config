@@ -26,7 +26,13 @@ end
 ---------------------------------------------------------------------------
 vim.keymap.set("n", "<leader>e", "<Cmd>NvimTreeToggle<CR>", { desc = "Toggle file explorer" })
 vim.keymap.set("n", "<Esc>", "<Cmd>nohlsearch<CR>", { desc = "Clear search highlights" })
-vim.keymap.set("i", "jk", "<Esc>", { noremap = true, silent = true, desc = "Exit insert mode" })
+vim.keymap.set("i", "jk", function()
+    -- Don't trigger during paste (bracketed paste mode)
+    if vim.fn.reg_executing() ~= "" or vim.fn.reg_recording() ~= "" then
+        return "jk"
+    end
+    return "<Esc>"
+end, { noremap = true, silent = true, expr = true, desc = "Exit insert mode" })
 vim.keymap.set("n", "<leader>cR", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], { desc = "Replace word under cursor" })
 
 -- Clipboard / register helpers
@@ -34,6 +40,13 @@ vim.keymap.set("x", "<leader>p", [["_dP]], { desc = "Paste without overwriting r
 vim.keymap.set({ "n", "v" }, "<leader>y", [["+y]], { desc = "Yank to system clipboard" })
 vim.keymap.set("n", "<leader>Y", [["+Y]], { desc = "Yank line to system clipboard" })
 vim.keymap.set({ "n", "v" }, "<leader>x", "\"_d", { desc = "Delete without copying" })
+-- System clipboard via pbpaste (avoids terminal Cmd+V truncation in tmux/Ghostty).
+-- <leader>v is free: no other map or which-key group uses plain leader+v
+-- (only <leader>ov / <leader>cv exist under other prefixes).
+vim.keymap.set("n", "<leader>v", "<Cmd>read !pbpaste<CR>", {
+    desc = "Paste clipboard via :r !pbpaste",
+    silent = true,
+})
 
 ---------------------------------------------------------------------------
 -- Window / Tmux navigation
@@ -294,9 +307,18 @@ if opencode_ok then
 end
 
 ---------------------------------------------------------------------------
+-- Cloak (hide .env secrets)
+---------------------------------------------------------------------------
+local cloak_ok, cloak = pcall(require, "cloak")
+if cloak_ok then
+    vim.keymap.set("n", "<leader>ck", "<Cmd>CloakToggle<CR>", { desc = "Toggle secret cloaking" })
+    vim.keymap.set("n", "<leader>cp", "<Cmd>CloakPreviewLine<CR>", { desc = "Preview cloaked line" })
+end
+
+---------------------------------------------------------------------------
 -- Which-Key group labels
 ---------------------------------------------------------------------------
--- Image hover (snacks.nvim) — works in leetcode and markdown buffers
+-- Image hover (snacks.nvim)
 ---------------------------------------------------------------------------
 local _img_hover = nil
 local _img_hover_close = function()
@@ -319,7 +341,7 @@ vim.keymap.set("n", "<leader>ci", function()
     _img_hover_close()
 
     -- First try the native snacks hover (works for markdown with treesitter)
-    -- For leetcode buffers, extract the URL from the line text directly
+    -- Extract the URL from the line text directly
     local line = vim.api.nvim_get_current_line()
     local src = line:match("%]%((https?://%S+)%)")
         or line:match("%(([^%)]+%.png)%)")
@@ -364,7 +386,7 @@ vim.keymap.set("n", "<leader>ci", function()
 
     -- Auto-close on cursor move, mode change, or buffer leave
     vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged", "BufLeave" }, {
-        group = vim.api.nvim_create_augroup("leetcode_image_hover", { clear = true }),
+        group = vim.api.nvim_create_augroup("image_hover", { clear = true }),
         callback = function()
             _img_hover_close()
             return true -- remove the autocmd
