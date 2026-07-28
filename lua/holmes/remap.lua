@@ -40,7 +40,9 @@ vim.keymap.set("x", "<leader>p", [["_dP]], { desc = "Paste without overwriting r
 vim.keymap.set({ "n", "v" }, "<leader>y", [["+y]], { desc = "Yank to system clipboard" })
 vim.keymap.set("n", "<leader>Y", [["+Y]], { desc = "Yank line to system clipboard" })
 vim.keymap.set({ "n", "v" }, "<leader>x", "\"_d", { desc = "Delete without copying" })
--- System clipboard via pbpaste (avoids terminal Cmd+V truncation in tmux/Ghostty).
+-- Manual pbpaste. Cmd+V is handled automatically now (holmes/paste.lua takes
+-- large pastes from the clipboard instead of the terminal stream); this stays
+-- for when you want the clipboard read explicitly. `:Paste` does the same.
 -- <leader>v is free: no other map or which-key group uses plain leader+v
 -- (only <leader>ov / <leader>cv exist under other prefixes).
 vim.keymap.set("n", "<leader>v", "<Cmd>read !pbpaste<CR>", {
