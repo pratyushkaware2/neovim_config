@@ -45,8 +45,12 @@ vim.keymap.set({ "n", "v" }, "<leader>x", "\"_d", { desc = "Delete without copyi
 -- for when you want the clipboard read explicitly. `:Paste` does the same.
 -- <leader>v is free: no other map or which-key group uses plain leader+v
 -- (only <leader>ov / <leader>cv exist under other prefixes).
-vim.keymap.set("n", "<leader>v", "<Cmd>read !pbpaste<CR>", {
-    desc = "Paste clipboard via :r !pbpaste",
+-- Uses the same code path as :Paste — charwise at the cursor, byte-exact
+-- (unlike :read !pbpaste, which inserts linewise below the current line).
+vim.keymap.set("n", "<leader>v", function()
+    require("holmes.paste").paste_clipboard()
+end, {
+    desc = "Paste clipboard via pbpaste (byte-exact, bypasses terminal)",
     silent = true,
 })
 
