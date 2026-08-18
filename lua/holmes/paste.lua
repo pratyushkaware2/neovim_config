@@ -37,6 +37,10 @@
 -- Escape hatch: `:lua vim.g.holmes_safe_paste = false` for the session.
 -- `:Paste` / <leader>v insert the clipboard via pbpaste directly, bypassing
 -- the wire entirely.
+--
+-- Diagnostics: `:PasteReport` shows what the last few streamed pastes did —
+-- whether the wrapper engaged, how many bytes arrived vs. the clipboard,
+-- and which way each paste was classified.
 
 local M = {}
 
@@ -123,11 +127,36 @@ end
 -- corruption (suffix = nearly everything), and mid-stream reordering
 -- (both large), but not for a genuinely different paste.
 local function resembles(got, clip)
+  local n = math.min(#got, #clip)
   local diff_at = first_diff(got, clip)
-  local prefix = diff_at and (diff_at - 1) or math.min(#got, #clip)
+  local prefix = diff_at and (diff_at - 1) or n
   local suffix = common_suffix(got, clip)
-  local overlap = math.min(prefix + suffix, math.min(#got, #clip))
-  return overlap >= math.min(#got, #clip) / 2
+  if math.min(prefix + suffix, n) >= n / 2 then
+    return true
+  end
+  -- Scattered damage (bytes dropped in many places) leaves both the shared
+  -- prefix and suffix short. Sample slices of the stream instead: a stream
+  -- that is mostly clipboard substrings is a damaged clipboard paste.
+  local SLICES, LEN = 8, 64
+  if #got < SLICES * LEN then
+    return false
+  end
+  local hits = 0
+  for i = 0, SLICES - 1 do
+    local start = 1 + math.floor(i * (#got - LEN) / (SLICES - 1))
+    if clip:find(got:sub(start, start + LEN - 1), 1, true) then
+      hits = hits + 1
+    end
+  end
+  return hits >= 6
+end
+
+-- Ring of the last few streamed pastes, for :PasteReport.
+local history = {}
+local function record(entry)
+  entry.at = os.date("%H:%M:%S")
+  table.insert(history, 1, entry)
+  history[9] = nil
 end
 
 function M.setup()
@@ -142,6 +171,7 @@ function M.setup()
 
   local stream_paste = vim.paste
   local state = nil ---@type {clip_raw: string, got: string[]}?
+  local watch = nil ---@type {bytes: integer, why: string}? -- unengaged streams
 
   ---@diagnostic disable-next-line: duplicate-set-field
   vim.paste = function(lines, phase)
@@ -153,15 +183,23 @@ function M.setup()
     end
 
     if phase == 1 then
-      state = nil
-      if vim.g.holmes_safe_paste
-          -- cmdline-mode pastes have their own line-joining semantics; leave
-          -- them to the default implementation.
-          and vim.api.nvim_get_mode().mode:sub(1, 1) ~= "c"
-          and #table.concat(lines, "\n") >= MIN_FIRST_CHUNK
-      then
+      state, watch = nil, nil
+      local why
+      if not vim.g.holmes_safe_paste then
+        why = "safe_paste disabled"
+      elseif vim.api.nvim_get_mode().mode:sub(1, 1) == "c" then
+        -- cmdline-mode pastes have their own line-joining semantics; leave
+        -- them to the default implementation.
+        why = "cmdline mode"
+      elseif #table.concat(lines, "\n") < MIN_FIRST_CHUNK then
+        why = "first chunk under " .. MIN_FIRST_CHUNK .. "B"
+      else
         local clip_raw = read_clipboard()
-        if clip_raw and #clip_raw >= M.threshold then
+        if not clip_raw then
+          why = "pbpaste unavailable/empty"
+        elseif #clip_raw < M.threshold then
+          why = ("clipboard %dB under %dB threshold"):format(#clip_raw, M.threshold)
+        else
           local got = {}
           for i, l in ipairs(lines) do
             got[i] = l
@@ -170,12 +208,20 @@ function M.setup()
         end
       end
       if not state then
+        watch = { bytes = #table.concat(lines, "\n"), why = why }
         return stream_paste(lines, phase)
       end
       return true -- engaged: swallow; everything is inserted at phase 3
     end
 
     if not state then
+      if watch then
+        watch.bytes = watch.bytes + #table.concat(lines, "\n")
+        if phase == 3 then
+          record({ engaged = false, why = watch.why, stream = watch.bytes })
+          watch = nil
+        end
+      end
       return stream_paste(lines, phase)
     end
 
@@ -190,11 +236,15 @@ function M.setup()
     local got_str = table.concat(st.got, "\n")
     if not resembles(got_str, st.clip_raw) then
       -- A genuine non-clipboard paste (tmux buffer, another source). Silent.
+      record({ engaged = true, decision = "kept: not the clipboard",
+        stream = #got_str, clip = #st.clip_raw })
       return stream_paste(st.got, -1)
     end
     if #got_str < MIN_SUBSTITUTE then
       -- Opens/closes like the clipboard but tiny: plausibly an intentional
       -- prefix selection. Keep it, but leave a trail in case it wasn't.
+      record({ engaged = true, decision = "kept: tiny clipboard fragment",
+        stream = #got_str, clip = #st.clip_raw })
       local ok = stream_paste(st.got, -1)
       vim.schedule(function()
         vim.notify(
@@ -209,6 +259,13 @@ function M.setup()
 
     -- A clipboard paste: discard the stream, insert the pbpaste copy.
     -- Silent — this is the normal path now, same as :Paste.
+    record({
+      engaged = true,
+      decision = got_str == st.clip_raw
+          and "clipboard inserted (stream was faithful)"
+          or "clipboard inserted (stream was damaged)",
+      stream = #got_str, clip = #st.clip_raw,
+    })
     return stream_paste(vim.split(st.clip_raw, "\n", { plain = true }), -1)
   end
 
@@ -216,6 +273,23 @@ function M.setup()
   vim.api.nvim_create_user_command("Paste", function()
     M.paste_clipboard()
   end, { desc = "Paste the system clipboard via pbpaste (bypasses the terminal stream)" })
+
+  -- What did recent streamed pastes (Cmd+V etc.) actually do?
+  vim.api.nvim_create_user_command("PasteReport", function()
+    if #history == 0 then
+      print("No streamed pastes this session.")
+      return
+    end
+    for _, e in ipairs(history) do
+      if e.engaged then
+        print(("%s  %s — stream %dB, clipboard %dB")
+          :format(e.at, e.decision, e.stream, e.clip))
+      else
+        print(("%s  not engaged (%s) — stream %dB inserted as-is")
+          :format(e.at, e.why, e.stream))
+      end
+    end
+  end, { desc = "Show how recent streamed pastes were classified" })
 end
 
 -- Insert the clipboard at the cursor, charwise, byte-exact. Used by :Paste
