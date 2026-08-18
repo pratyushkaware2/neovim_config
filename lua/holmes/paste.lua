@@ -1,55 +1,59 @@
--- Large pastes never trust the terminal stream: Cmd+V becomes :Paste.
+-- Atomic pastes: never render the terminal stream chunk by chunk, and take
+-- large clipboard pastes from pbpaste instead of the wire.
 --
 -- Pasting with Cmd+V goes Ghostty -> tmux -> pty -> nvim, and that path is a
--- keystroke simulation with no length, no ordering guarantee, no checksum. A
--- 427 KB transcript pasted this way arrived with a contiguous 14 KB region
--- relocated ~296 KB from where it belonged; other pastes have arrived
--- truncated ("half the stuff"). Nothing warns you at paste time — the damage
--- surfaces later when a parser disagrees with the source.
+-- keystroke simulation with no length, no ordering guarantee, no checksum.
+-- nvim receives it as a stream of ~1 KB chunks and, by default, inserts and
+-- redraws each chunk as it arrives — the characters-typing-themselves
+-- "animation". That per-chunk processing is also timing-sensitive (redraws
+-- and autocmds run between chunks), which is how large pastes came out
+-- corrupted intermittently: a 427 KB transcript once arrived with a 14 KB
+-- region relocated ~296 KB from where it belonged.
 --
 -- The clipboard itself is fine: `"+p`, `:Paste` and `:r !pbpaste` round-trip
 -- byte-for-byte, because they read the pasteboard directly instead of the
--- wire. So the clipboard is the authority, and the wire is retired: it is
--- used only to detect that a paste happened and to tell clipboard pastes
--- apart from other sources.
+-- wire. So the clipboard is the authority, and the wire is used only to
+-- detect that a paste happened and to tell clipboard pastes apart from
+-- other sources.
 --
 -- Method (streamed pastes only — phase 1..3; phase -1 is the nvim_paste API
 -- path, which never crossed a pty and is left alone):
 --
---   1. At phase 1, if the clipboard holds >= `threshold` bytes, engage:
---      swallow the stream and reconstruct it chunk by chunk. (No prefix
---      check here — corruption can hit the FIRST chunk too, and an early
---      prefix test would fail open exactly then.)
---   2. At phase 3, classify the reconstruction:
---        resembles the clipboard (shared prefix + suffix cover >= half of
---        the shorter of the two) and is reasonably large
---                         -> this was a clipboard paste. Discard the stream
---                            and insert the pbpaste copy, silently — exactly
---                            what :Paste does, whether or not the wire was
---                            faithful.
+--   1. Swallow EVERY streamed paste: accumulate chunks, insert nothing
+--      until the stream ends. (An earlier version decided at phase 1 based
+--      on the first chunk's size — but chunk boundaries are pty read timing,
+--      so a large paste whose first chunk happened to be tiny fell through
+--      to the default chunk-by-chunk path. Never gate on chunking.)
+--   2. At phase 3, classify the complete stream and insert exactly once:
+--        small stream      -> insert as-is. Atomic, no clipboard involved.
+--        resembles a large clipboard (shared prefix + suffix cover >= half,
+--        or sampled slices of the stream are found in the clipboard)
+--                          -> this was a clipboard paste. Discard the stream
+--                             and insert the pbpaste copy, silently — same
+--                             result as :Paste, whether or not the wire was
+--                             faithful.
 --        resembles but tiny -> ambiguous: could be a truncated paste or an
---                            intentional small prefix selection (e.g. from a
---                            tmux buffer). Keep the stream, but mention
---                            :Paste in case it was Cmd+V.
---        unrelated        -> a genuine non-clipboard paste (tmux buffer,
---                            another source). Insert it untouched, silently.
+--                             intentional small prefix selection (e.g. from
+--                             a tmux buffer). Keep the stream, mention
+--                             :Paste in case it was Cmd+V.
+--        unrelated         -> a genuine non-clipboard paste. Insert it
+--                             untouched, silently.
 --
--- Escape hatch: `:lua vim.g.holmes_safe_paste = false` for the session.
--- `:Paste` / <leader>v insert the clipboard via pbpaste directly, bypassing
--- the wire entirely.
+-- Escape hatch: `:lua vim.g.holmes_safe_paste = false` for the session
+-- (restores default streaming). `:Paste` / <leader>v insert the clipboard
+-- via pbpaste directly, bypassing the wire entirely.
 --
 -- Diagnostics: `:PasteReport` shows what the last few streamed pastes did —
--- whether the wrapper engaged, how many bytes arrived vs. the clipboard,
--- and which way each paste was classified.
+-- bytes streamed vs. clipboard and how each was classified.
 
 local M = {}
 
--- Only clipboards at least this large get the treatment; below it the wire
--- has never been observed to fail.
+-- Only clipboards at least this large can replace a stream; below it the
+-- wire has never been observed to fail.
 M.threshold = 16 * 1024
 
--- Don't bother forking pbpaste for a first chunk this small.
-local MIN_FIRST_CHUNK = 64
+-- Streams below this are inserted as-is without forking pbpaste.
+local MIN_CLASSIFY = 512
 
 -- A clipboard-resembling stream at least this large is taken from the
 -- clipboard; smaller ones are kept (more plausibly an intentional prefix
@@ -121,11 +125,7 @@ local function common_suffix(a, b)
   return s
 end
 
--- Does `got` look like a damaged copy of `clip`? True when the shared
--- prefix plus shared suffix cover at least half of the shorter string —
--- which holds for truncation (prefix = everything that arrived), early
--- corruption (suffix = nearly everything), and mid-stream reordering
--- (both large), but not for a genuinely different paste.
+-- Does `got` look like a (possibly damaged) copy of `clip`?
 local function resembles(got, clip)
   local n = math.min(#got, #clip)
   local diff_at = first_diff(got, clip)
@@ -170,58 +170,35 @@ function M.setup()
   M._wrapped = true
 
   local stream_paste = vim.paste
-  local state = nil ---@type {clip_raw: string, got: string[]}?
-  local watch = nil ---@type {bytes: integer, why: string}? -- unengaged streams
+  local state = nil ---@type {got: string[]}?
 
   ---@diagnostic disable-next-line: duplicate-set-field
   vim.paste = function(lines, phase)
     -- phase -1: whole paste in one call — the nvim_paste API path. It never
-    -- went through the pty, so there is nothing to verify.
+    -- went through the pty, so there is nothing to fix.
     if phase == -1 then
       state = nil
       return stream_paste(lines, phase)
     end
 
     if phase == 1 then
-      state, watch = nil, nil
-      local why
-      if not vim.g.holmes_safe_paste then
-        why = "safe_paste disabled"
-      elseif vim.api.nvim_get_mode().mode:sub(1, 1) == "c" then
-        -- cmdline-mode pastes have their own line-joining semantics; leave
-        -- them to the default implementation.
-        why = "cmdline mode"
-      elseif #table.concat(lines, "\n") < MIN_FIRST_CHUNK then
-        why = "first chunk under " .. MIN_FIRST_CHUNK .. "B"
-      else
-        local clip_raw = read_clipboard()
-        if not clip_raw then
-          why = "pbpaste unavailable/empty"
-        elseif #clip_raw < M.threshold then
-          why = ("clipboard %dB under %dB threshold"):format(#clip_raw, M.threshold)
-        else
-          local got = {}
-          for i, l in ipairs(lines) do
-            got[i] = l
-          end
-          state = { clip_raw = clip_raw, got = got }
-        end
-      end
-      if not state then
-        watch = { bytes = #table.concat(lines, "\n"), why = why }
+      state = nil
+      if not vim.g.holmes_safe_paste
+          -- cmdline-mode pastes have their own line-joining semantics; leave
+          -- them to the default implementation.
+          or vim.api.nvim_get_mode().mode:sub(1, 1) == "c"
+      then
         return stream_paste(lines, phase)
       end
-      return true -- engaged: swallow; everything is inserted at phase 3
+      local got = {}
+      for i, l in ipairs(lines) do
+        got[i] = l
+      end
+      state = { got = got }
+      return true -- swallow; everything is inserted at phase 3
     end
 
     if not state then
-      if watch then
-        watch.bytes = watch.bytes + #table.concat(lines, "\n")
-        if phase == 3 then
-          record({ engaged = false, why = watch.why, stream = watch.bytes })
-          watch = nil
-        end
-      end
       return stream_paste(lines, phase)
     end
 
@@ -234,39 +211,44 @@ function M.setup()
     local st = state
     state = nil
     local got_str = table.concat(st.got, "\n")
-    if not resembles(got_str, st.clip_raw) then
-      -- A genuine non-clipboard paste (tmux buffer, another source). Silent.
-      record({ engaged = true, decision = "kept: not the clipboard",
-        stream = #got_str, clip = #st.clip_raw })
-      return stream_paste(st.got, -1)
-    end
-    if #got_str < MIN_SUBSTITUTE then
-      -- Opens/closes like the clipboard but tiny: plausibly an intentional
-      -- prefix selection. Keep it, but leave a trail in case it wasn't.
-      record({ engaged = true, decision = "kept: tiny clipboard fragment",
-        stream = #got_str, clip = #st.clip_raw })
-      local ok = stream_paste(st.got, -1)
-      vim.schedule(function()
-        vim.notify(
-          ("Pasted %d bytes that look like a fragment of the %d-byte clipboard. "
-            .. "If this was Cmd+V, the stream was truncated — use :Paste or <leader>v.")
-          :format(#got_str, #st.clip_raw),
-          vim.log.levels.INFO
-        )
-      end)
-      return ok
-    end
 
-    -- A clipboard paste: discard the stream, insert the pbpaste copy.
-    -- Silent — this is the normal path now, same as :Paste.
-    record({
-      engaged = true,
-      decision = got_str == st.clip_raw
-          and "clipboard inserted (stream was faithful)"
-          or "clipboard inserted (stream was damaged)",
-      stream = #got_str, clip = #st.clip_raw,
-    })
-    return stream_paste(vim.split(st.clip_raw, "\n", { plain = true }), -1)
+    if #got_str >= MIN_CLASSIFY then
+      local clip_raw = read_clipboard()
+      if clip_raw and #clip_raw >= M.threshold and resembles(got_str, clip_raw) then
+        if #got_str >= MIN_SUBSTITUTE then
+          -- A clipboard paste: discard the stream, insert the pbpaste copy.
+          -- Silent — this is the normal path, same as :Paste.
+          record({
+            decision = got_str == clip_raw
+                and "clipboard inserted (stream was faithful)"
+                or "clipboard inserted (stream was damaged)",
+            stream = #got_str, clip = #clip_raw,
+          })
+          return stream_paste(vim.split(clip_raw, "\n", { plain = true }), -1)
+        end
+        -- Opens/closes like the clipboard but tiny: plausibly an intentional
+        -- prefix selection. Keep it, but leave a trail in case it wasn't.
+        record({ decision = "kept: tiny clipboard fragment",
+          stream = #got_str, clip = #clip_raw })
+        local ok = stream_paste(st.got, -1)
+        vim.schedule(function()
+          vim.notify(
+            ("Pasted %d bytes that look like a fragment of the %d-byte clipboard. "
+              .. "If this was Cmd+V, the stream was truncated — use :Paste or <leader>v.")
+            :format(#got_str, #clip_raw),
+            vim.log.levels.INFO
+          )
+        end)
+        return ok
+      end
+      record({ decision = "kept: not the clipboard", stream = #got_str,
+        clip = clip_raw and #clip_raw or 0 })
+    else
+      record({ decision = "kept: small paste", stream = #got_str })
+    end
+    -- Not a large clipboard paste: insert the stream itself — still in one
+    -- atomic put, so even non-clipboard pastes never animate.
+    return stream_paste(st.got, -1)
   end
 
   -- Explicit, always-safe paste: reads the pasteboard, never the wire.
@@ -281,13 +263,8 @@ function M.setup()
       return
     end
     for _, e in ipairs(history) do
-      if e.engaged then
-        print(("%s  %s — stream %dB, clipboard %dB")
-          :format(e.at, e.decision, e.stream, e.clip))
-      else
-        print(("%s  not engaged (%s) — stream %dB inserted as-is")
-          :format(e.at, e.why, e.stream))
-      end
+      print(("%s  %s — stream %dB%s"):format(e.at, e.decision, e.stream,
+        e.clip and (", clipboard " .. e.clip .. "B") or ""))
     end
   end, { desc = "Show how recent streamed pastes were classified" })
 end
